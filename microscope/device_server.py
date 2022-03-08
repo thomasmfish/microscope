@@ -593,18 +593,18 @@ def validate_devices(configfile):
 
 
 def main(argv: typing.Sequence[str]) -> int:
-    options = _parse_cmd_line_args(argv[1:])
+    with os.add_dll_directory(os.getcwd()):
+        options = _parse_cmd_line_args(argv[1:])
 
-    root_logger = logging.getLogger()
-    root_logger.setLevel(options.logging_level)
+        root_logger = logging.getLogger()
+        root_logger.setLevel(options.logging_level)
 
-    stderr_handler = StreamHandler(sys.stderr)
-    stderr_handler.setFormatter(_create_log_formatter("device-server"))
-    root_logger.addHandler(stderr_handler)
+        stderr_handler = StreamHandler(sys.stderr)
+        stderr_handler.setFormatter(_create_log_formatter("device-server"))
+        root_logger.addHandler(stderr_handler)
 
-    root_logger.addFilter(Filter())
+        root_logger.addFilter(Filter())
 
-    with os.add_dll_directory(os.path.dirname(os.path.abspath(__file__))):
         devices = validate_devices(options.config_fpath)
         serve_devices(devices, options)
 
