@@ -136,6 +136,7 @@ This module exposes pvcam C library functions in python.
 import ctypes
 import logging
 import os
+import sys
 import platform
 import time
 import weakref
@@ -675,10 +676,13 @@ class md_frame(ctypes.Structure):
 
 
 if os.name in ("nt", "ce"):
+    kwargs = {}
+    if sys.version_info >= (3, 8):
+        kwargs["winmode"] = 0
     if platform.architecture()[0] == "32bit":
-        _lib = ctypes.WinDLL("pvcam32")
+        _lib = ctypes.WinDLL("pvcam32", **kwargs)
     else:
-        _lib = ctypes.WinDLL("pvcam64")
+        _lib = ctypes.WinDLL("pvcam64", **kwargs)
 else:
     _lib = ctypes.CDLL("pvcam.so")
 

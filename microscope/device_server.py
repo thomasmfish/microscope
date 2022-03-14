@@ -40,7 +40,6 @@ import importlib.machinery
 import importlib.util
 import logging
 import multiprocessing
-import os
 import signal
 import sys
 import time
@@ -593,20 +592,20 @@ def validate_devices(configfile):
 
 
 def main(argv: typing.Sequence[str]) -> int:
-    with os.add_dll_directory(os.getcwd()):
-        options = _parse_cmd_line_args(argv[1:])
+    options = _parse_cmd_line_args(argv[1:])
 
-        root_logger = logging.getLogger()
-        root_logger.setLevel(options.logging_level)
+    root_logger = logging.getLogger()
+    root_logger.setLevel(options.logging_level)
 
-        stderr_handler = StreamHandler(sys.stderr)
-        stderr_handler.setFormatter(_create_log_formatter("device-server"))
-        root_logger.addHandler(stderr_handler)
+    stderr_handler = StreamHandler(sys.stderr)
+    stderr_handler.setFormatter(_create_log_formatter("device-server"))
+    root_logger.addHandler(stderr_handler)
 
-        root_logger.addFilter(Filter())
+    root_logger.addFilter(Filter())
 
-        devices = validate_devices(options.config_fpath)
-        serve_devices(devices, options)
+    devices = validate_devices(options.config_fpath)
+
+    serve_devices(devices, options)
 
     return 0
 
