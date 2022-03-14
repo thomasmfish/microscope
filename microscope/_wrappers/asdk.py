@@ -26,7 +26,7 @@ from ctypes import c_char_p, c_double, c_int, c_size_t, c_uint32
 
 
 if os.name in ("nt", "ce"):
-    SDK = ctypes.WinDLL("ASDK")
+    SDK = ctypes.WinDLL("ASDK", winmode=0)
 else:
     # Not actually tested yet
     SDK = ctypes.CDLL("libasdk.so")
