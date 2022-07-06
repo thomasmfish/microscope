@@ -19,11 +19,40 @@
 
 import threading
 import typing
+import os
+import sys
+import ctypes
 
 import serial
 
 import microscope
 import microscope.abc
+
+def load_library(windows_file=None, unix_file=None):
+    if windows_file is not None and os.name in ("nt", "ce"):
+        kwargs = {}
+        if sys.version_info >= (3, 8):
+            kwargs["winmode"] = 0
+        return ctypes.WinDLL(windows_file, **kwargs)
+    elif unix_file is not None:
+        return ctypes.CDLL(unix_file)
+
+
+# Both pySerial and serial distribution packages install an import
+# package named serial.  If both are installed we may have imported
+# the wrong one.  Check it to provide a better error message.  See
+# issue #232.
+if not hasattr(serial, "Serial"):
+    if hasattr(serial, "marshall"):
+        raise microscope.MicroscopeError(
+            "incorrect imported package serial.  It appears that the serial"
+            " package from the distribution serial, instead of pyserial, was"
+            " imported.  Consider uninstalling serial and installing pySerial."
+        )
+    else:
+        raise microscope.MicroscopeError(
+            "imported package serial does not have Serial class"
+        )
 
 
 # Both pySerial and serial distribution packages install an import
