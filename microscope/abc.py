@@ -247,8 +247,7 @@ class TriggerTargetMixin(metaclass=abc.ABCMeta):
     def set_trigger(
         self, ttype: microscope.TriggerType, tmode: microscope.TriggerMode
     ) -> None:
-        """Set device for a specific trigger.
-        """
+        """Set device for a specific trigger."""
         raise NotImplementedError()
 
     @abc.abstractmethod
@@ -960,7 +959,7 @@ class Camera(TriggerTargetMixin, DataDevice):
         raise NotImplementedError()
 
     def get_roi(self) -> microscope.ROI:
-        """Return current ROI. """
+        """Return current ROI."""
         roi = self._get_roi()
         if self._transform[2]:
             # 90 degree rotation
@@ -1015,8 +1014,7 @@ class SerialDeviceMixin(metaclass=abc.ABCMeta):
         self._comms_lock = threading.RLock()
 
     def _readline(self) -> bytes:
-        """Read a line from connection without leading and trailing whitespace.
-        """
+        """Read a line from connection without leading and trailing whitespace."""
         return self.connection.readline().strip()
 
     def _write(self, command: bytes) -> int:
@@ -1470,6 +1468,27 @@ class Stage(Device, metaclass=abc.ABCMeta):
         """
         raise NotImplementedError()
 
+    @property
+    def need_homed(self) -> bool:
+        """Boolean flag to say if the stage needs to be homed. Many stages 
+        need to be driven to their limts at startup to find a repeatable zero
+        position and sometimes to find their limits as well. 
+
+        By default this function returns "False". If the stage needs
+        to be homed then this function should be overwritten to return
+        "True" until the homing operation has been performed.
+        Additionaly a stage that needs to be homed should implement a
+        home() fucntion that performs the home move, sets limits and
+        leaves the stage somewhere sensible.  This function should
+        also set the need_homed propety to False.
+
+        Stages that dont need homing can leave this default function
+        and dont need to implment the home() function.
+
+        """
+        return False
+
+    
     @property
     def position(self) -> typing.Mapping[str, float]:
         """Map of axis name to their current position.
