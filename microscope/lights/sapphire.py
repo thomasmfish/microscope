@@ -92,7 +92,7 @@ class SapphireLaser(
     @microscope.abc.SerialDeviceMixin.lock_comms
     def send(self, command, ignore=[]):
         self._write(command)
-        self._readline(ignore=ignore, float=self.connection.timeout)
+        return self._readline(ignore=ignore, float=self.connection.timeout)
 
     @microscope.abc.SerialDeviceMixin.lock_comms
     def clearFault(self):
