@@ -44,7 +44,6 @@ import signal
 import sys
 import time
 import typing
-from copy import deepcopy
 from collections.abc import Iterable
 from dataclasses import dataclass
 from logging import FileHandler, StreamHandler
@@ -127,7 +126,7 @@ def device(
             raise TypeError("uid must be specified for floating devices")
         elif not issubclass(cls, FloatingDeviceMixin) and uid is not None:
             raise TypeError("uid must not be given for non floating devices")
-    return dict(cls=cls, host=host, port=int(port), uid=uid, conf=deepcopy(conf))
+    return dict(cls=cls, host=host, port=int(port), uid=uid, conf=conf)
 
 
 def _create_log_formatter(name: str):
