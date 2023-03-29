@@ -40,7 +40,6 @@ import importlib.machinery
 import importlib.util
 import logging
 import multiprocessing
-import os.path
 import signal
 import sys
 import time

@@ -42,6 +42,7 @@ import ctypes
 import datetime
 import os
 import os.path
+import sys
 import threading
 import time
 from ctypes import POINTER, byref
@@ -49,6 +50,7 @@ from enum import Enum, IntEnum
 
 import microscope
 import microscope.abc
+from microscope._utils import load_library
 
 
 _max_version_length = 20
@@ -974,10 +976,7 @@ class _LinkamBase(microscope.abc.FloatingDeviceMixin, microscope.abc.Device):
     @staticmethod
     def init_sdk():
         """Initialise the SDK and set up event callbacks"""
-        if os.name == "nt":  # is windows
-            __class__._lib = ctypes.CDLL("LinkamSDK.dll")
-        else:  # assuming Linux.  Not tested.
-            __class__._lib = ctypes.CDLL("libLinkamSDK.so")
+        __class__._lib = load_library(windows_file="LinkamSDK.dll", unix_file="libLinkamSDK.so")
         _lib = __class__._lib
         """Initialise the SDK, and create and set the callbacks."""
         # Omit conditional pending a fix for ctypes issues when optimisations in use.

@@ -65,6 +65,7 @@ from numpy.ctypeslib import ndpointer
 
 import microscope
 import microscope.abc
+from microscope._utils import load_library
 
 
 _logger = logging.getLogger(__name__)
@@ -87,10 +88,7 @@ if arch == "32bit":
     _dllName = "atmcd32d"
 else:
     _dllName = "atmcd64d"
-if os.name == "nt":  # is windows
-    _dll = ctypes.WinDLL(_dllName)
-else:
-    _dll = ctypes.CDLL(_dllName + ".so")
+_dll = load_library(windows_file=_dllName, unix_file=_dllName + ".so")
 
 # Andor's types
 at_32 = c_long

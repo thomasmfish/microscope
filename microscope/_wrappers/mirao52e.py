@@ -22,10 +22,10 @@
 
 import ctypes
 
+from microscope._utils import load_library
 
 # Vendor only supports Windows
-SDK = ctypes.WinDLL("mirao52e")
-
+SDK = load_library(windows_file="mirao52e")
 
 TRUE = 1  # TRUE MroBoolean value
 FALSE = 0  # FALSE MroBoolean value
