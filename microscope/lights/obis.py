@@ -42,30 +42,23 @@ class ObisLaser(microscope.abc.SerialDeviceMixin, microscope.abc.LightSource):
             parity=serial.PARITY_NONE,
         )
         # Start a logger.
-        self._write(b"SYSTem:INFormation:MODel?")
-        response = self._readline()
+        response = self.send(b"SYSTem:INFormation:MODel?")
         _logger.info("OBIS laser model: [%s]", response.decode())
-        self._write(b"SYSTem:INFormation:SNUMber?")
-        response = self._readline()
+        response = self.send(b"SYSTem:INFormation:SNUMber?")
         _logger.info("OBIS laser serial number: [%s]", response.decode())
-        self._write(b"SYSTem:CDRH?")
-        response = self._readline()
+        response = self.send(b"SYSTem:CDRH?")
         _logger.info("CDRH safety: [%s]", response.decode())
-        self._write(b"SOURce:TEMPerature:APRobe?")
-        response = self._readline()
+        response = self.send(b"SOURce:TEMPerature:APRobe?")
         _logger.info("TEC temperature control: [%s]", response.decode())
-        self._write(b"*TST?")
-        response = self._readline()
+        response = self.send(b"*TST?")
         _logger.info("Self test procedure: [%s]", response.decode())
 
         # We need to ensure that autostart is disabled so that we can
         # switch emission on/off remotely.
-        self._write(b"SYSTem:AUTostart?")
-        response = self._readline()
+        response = self.send(b"SYSTem:AUTostart?")
         _logger.info("Response to Autostart: [%s]", response.decode())
 
-        self._write(b"SOURce:POWer:LIMit:HIGH?")
-        response = self._readline()
+        response = self.send(b"SOURce:POWer:LIMit:HIGH?")
         _logger.info("Max intensity in watts: [%s]", response.decode())
         self._max_power_mw = float(response) * 1000.0
 
@@ -87,6 +80,11 @@ class ObisLaser(microscope.abc.SerialDeviceMixin, microscope.abc.LightSource):
             )
         return response
 
+    def send(self, command) -> bytes:
+        """Send command and retrieve response."""
+        self._write(command)
+        return self._readline()
+
     def _flush_handshake(self):
         self.connection.readline()
 
@@ -101,8 +99,7 @@ class ObisLaser(microscope.abc.SerialDeviceMixin, microscope.abc.LightSource):
             (b"SYSTem:FAULt?", "Fault code?"),
             (b"SYSTem:HOURs?", "Head operating hours:"),
         ]:
-            self._write(cmd)
-            result.append(stat + " " + self._readline().decode())
+            result.append(stat + " " + self.send(cmd).decode())
         return result
 
     @microscope.abc.SerialDeviceMixin.lock_comms
@@ -115,8 +112,7 @@ class ObisLaser(microscope.abc.SerialDeviceMixin, microscope.abc.LightSource):
         # Turn on emission.
         self._write(b"SOURce:AM:STATe ON")
         self._flush_handshake()
-        self._write(b"SOURce:AM:STATe?")
-        response = self._readline()
+        response = self.send(b"SOURce:AM:STATe?")
         _logger.info("SOURce:AM:STATe? [%s]", response.decode())
 
         if not self.get_is_on():
@@ -165,8 +161,7 @@ class ObisLaser(microscope.abc.SerialDeviceMixin, microscope.abc.LightSource):
     @microscope.abc.SerialDeviceMixin.lock_comms
     def get_is_on(self):
         """Return True if the laser is currently able to produce light."""
-        self._write(b"SOURce:AM:STATe?")
-        response = self._readline()
+        response = self.send(b"SOURce:AM:STATe?")
         _logger.info("Are we on? [%s]", response.decode())
         return response == b"ON"
 
@@ -174,8 +169,7 @@ class ObisLaser(microscope.abc.SerialDeviceMixin, microscope.abc.LightSource):
     def _get_power_mw(self):
         if not self.get_is_on():
             return 0.0
-        self._write(b"SOURce:POWer:LEVel?")
-        response = self._readline()
+        response = self.send(b"SOURce:POWer:LEVel?")
         return float(response.decode()) * 1000.0
 
     @microscope.abc.SerialDeviceMixin.lock_comms

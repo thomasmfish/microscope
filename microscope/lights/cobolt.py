@@ -71,12 +71,13 @@ class CoboltLaser(
         success = False
         while not success:
             self._write(command)
-            response = self._readline()
+            response = self._readline(
+                ignore=[command],
+                timeout=self.connection.timeout
+                )
             # Catch zero-length responses to queries and retry.
-            if not command.endswith(b"?"):
-                success = True
-            elif len(response) > 0:
-                success = True
+            success = len(response) > 0 or not command.endswith(b"?")
+            _logger.debug("%s response: %s", command, response.decode())
         return response
 
     @microscope.abc.SerialDeviceMixin.lock_comms
@@ -159,7 +160,9 @@ class CoboltLaser(
         # non-negative number is accepted.
         W_str = "%.4f" % (mW / 1000.0)
         _logger.info("Setting laser power to %s W.", W_str)
-        return self.send(b"@cobasp " + W_str.encode())
+        response = self.send(b"@cobasp " + W_str.encode())
+        _logger.info("Power response [%s]", response.decode())
+        return response
 
     def _do_set_power(self, power: float) -> None:
         self._set_power_mw(power * self._max_power_mw)

@@ -87,13 +87,12 @@ class SapphireLaser(
         # This device always writes backs something.  If echo is on,
         # it's the whole command, otherwise just an empty line.  Read
         # it and throw it away.
-        self._readline()
         return count
 
-    def send(self, command):
-        """Send command and retrieve response."""
+    @microscope.abc.SerialDeviceMixin.lock_comms
+    def send(self, command, ignore=[]):
         self._write(command)
-        return self._readline()
+        self._readline(ignore=ignore, float=self.connection.timeout)
 
     @microscope.abc.SerialDeviceMixin.lock_comms
     def clearFault(self):
@@ -103,7 +102,7 @@ class SapphireLaser(
     def flush_buffer(self):
         line = b" "
         while len(line) > 0:
-            line = self._readline()
+            line = self._readline(timeout=self.connection.timeout)
 
     @microscope.abc.SerialDeviceMixin.lock_comms
     def get_status(self):
@@ -127,12 +126,11 @@ class SapphireLaser(
         ]:
             result.append(stat + " " + self.send(cmd).decode())
 
-        self._write(b"?fl")
-        faults = self._readline()
-        response = self._readline()
+        faults = self.send(b"?fl")
+        response = self._readline(ignore=[b"?fl"], timeout=5)
         while response:
             faults += b" " + response
-            response = self._readline()
+            response = self._readline(ignore=[b"?fl"], timeout=5)
 
         result.append(faults.decode())
         return result
