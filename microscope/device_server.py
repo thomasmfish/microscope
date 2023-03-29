@@ -35,6 +35,7 @@ where ``CONFIG-FILEPATH`` is the path for a python file that defines a
 """
 
 import argparse
+import copy
 import importlib.machinery
 import importlib.util
 import logging
@@ -333,6 +334,8 @@ class DeviceServer(multiprocessing.Process):
                     time.sleep(5)
                 else:
                     break
+            # FIXME: if the above never succeds, then local variable
+            # 'device' will now be referenced before assignment.
             self._devices = {cls_name: device}
 
         if cls_is_type and issubclass(cls, FloatingDeviceMixin):
@@ -392,6 +395,12 @@ class DeviceServer(multiprocessing.Process):
 
 
 def serve_devices(devices, options: DeviceServerOptions, exit_event=None):
+    # We make changes to `devices` (would be great if we didn't had
+    # to) so make a a copy of it because we don't want to make those
+    # changes on the caller.  See original issue on #211 and PRs #212
+    # and #217 (most discussion happens on #212).
+    devices = copy.deepcopy(devices)
+
     root_logger = logging.getLogger()
 
     log_handler = RotatingFileHandler("__MAIN__.log")

@@ -28,11 +28,14 @@ but should be readily extensible to support other Linkam stages.
 .. note::
 
     This module does not run correctly with python optimisations in
-    use.  When invoked with `python -O`, there seem to be issues with
-    accessing ctypes objects.
+    use.  When invoked with ``python -O``, there seem to be issues
+    with accessing ctypes objects.
 
-* `get_status()` throws `AttributeError` "c_ulonglong has no attribute 'flags'";
-* `get_id` returns an empty string, not the device serial number.
+* ``get_status()`` throws ``AttributeError`` "c_ulonglong has no
+  attribute 'flags'";
+
+* ``get_id`` returns an empty string, not the device serial number.
+
 """
 
 import ctypes
@@ -991,7 +994,7 @@ class _LinkamBase(microscope.abc.FloatingDeviceMixin, microscope.abc.Device):
         ]
         for p in lpaths:
             lskpath = os.path.join(p, "Linkam.lsk")
-            if _lib.linkamInitialiseSDK(sdk_log, lskpath.encode(), True):
+            if _lib.linkamInitialiseSDK(sdk_log, lskpath.encode(), True) == 1:
                 break
         else:
             raise microscope.LibraryLoadError(
@@ -1267,11 +1270,11 @@ class _LinkamBase(microscope.abc.FloatingDeviceMixin, microscope.abc.Device):
     def get_status(self, *args):
         """Called by a client to fetch status in a dict.
 
-        Derived classes and mixins should implement this to add their own status.
+        Derived classes and mixins should implement this to add their own status::
 
-        status = super().get_status(*args, status_structure, ...) in derived classes.
-        # then add any other values with
-        status[key] = ...
+            status = super().get_status(*args, status_structure, ...) # in derived classes.
+            # then add any other values with
+            status[key] = ...
         """
         structs = args + (self._status, self._connectionstatus)
         status = {}
