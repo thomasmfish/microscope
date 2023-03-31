@@ -80,11 +80,13 @@ class ObisLaser(microscope.abc.SerialDeviceMixin, microscope.abc.LightSource):
             )
         return response
 
+    @microscope.abc.SerialDeviceMixin.lock_comms
     def send(self, command) -> bytes:
         """Send command and retrieve response."""
         self._write(command)
         return self._readline()
 
+    @microscope.abc.SerialDeviceMixin.lock_comms
     def _flush_handshake(self):
         self.connection.readline()
 
@@ -122,6 +124,7 @@ class ObisLaser(microscope.abc.SerialDeviceMixin, microscope.abc.LightSource):
             return False
         return True
 
+    @microscope.abc.SerialDeviceMixin.lock_comms
     def _do_shutdown(self) -> None:
         self.disable()
         # We set the power to a safe level
@@ -134,6 +137,7 @@ class ObisLaser(microscope.abc.SerialDeviceMixin, microscope.abc.LightSource):
         self._write(b"SOURce:TEMPerature:APRobe OFF")
         self._flush_handshake()
 
+    @microscope.abc.SerialDeviceMixin.lock_comms
     def initialize(self):
         # self.flush_buffer()
         # We ensure that handshaking is off.
@@ -158,7 +162,6 @@ class ObisLaser(microscope.abc.SerialDeviceMixin, microscope.abc.LightSource):
             return False
         return True
 
-    @microscope.abc.SerialDeviceMixin.lock_comms
     def get_is_on(self):
         """Return True if the laser is currently able to produce light."""
         response = self.send(b"SOURce:AM:STATe?")

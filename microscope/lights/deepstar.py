@@ -81,6 +81,7 @@ class DeepstarLaser(
         response = self.connection.write(command)
         return response
 
+    @microscope.abc.SerialDeviceMixin.lock_comms
     def send(self, command, ignore=[]):
         """Send command and retrieve response."""
         self._write(command)
@@ -133,30 +134,26 @@ class DeepstarLaser(
         self.disable()
 
     # Turn the laser OFF.
-    @microscope.abc.SerialDeviceMixin.lock_comms
     def _do_disable(self):
         _logger.info("Turning laser OFF.")
         return self.send(b"LF").decode()
 
     # Return True if the laser is currently able to produce light. We assume this is equivalent
     # to the laser being in S2 mode.
-    @microscope.abc.SerialDeviceMixin.lock_comms
     def get_is_on(self):
         response = self.send(b"S?")
         _logger.debug("Are we on? [%s]", response.decode())
         return response == b"S2"
 
-    @microscope.abc.SerialDeviceMixin.lock_comms
     def _do_set_power(self, power: float) -> None:
-        _logger.info("level=%d", power)
+        _logger.debug("level=%d", power)
         power_int = int(power * 0xFFF)
         _logger.debug("power=%d", power_int)
         strPower = "PP%03X" % power_int
         _logger.debug("power level=%s", strPower)
-        self._write(strPower.encode())
-        _logger.info("Power response [%s]", self._readline().decode())
+        response = self.send(strPower.encode())
+        _logger.debug("Power response [%s]", response.decode())
 
-    @microscope.abc.SerialDeviceMixin.lock_comms
     def _do_get_power(self) -> float:
         if not self.get_is_on():
             return 0.0

@@ -66,6 +66,7 @@ class CoboltLaser(
 
         self.initialize()
 
+    @microscope.abc.SerialDeviceMixin.lock_comms
     def send(self, command):
         """Send command and retrieve response."""
         success = False
@@ -131,13 +132,11 @@ class CoboltLaser(
         return True
 
     # Turn the laser OFF.
-    @microscope.abc.SerialDeviceMixin.lock_comms
     def disable(self):
         _logger.info("Turning laser OFF.")
         return self.send(b"l0").decode()
 
     # Return True if the laser is currently able to produce light.
-    @microscope.abc.SerialDeviceMixin.lock_comms
     def get_is_on(self):
         response = self.send(b"l?")
         return response == b"1"
@@ -154,14 +153,13 @@ class CoboltLaser(
                 success = True
         return 1000 * float(response)
 
-    @microscope.abc.SerialDeviceMixin.lock_comms
     def _set_power_mw(self, mW: float) -> None:
         # There is no minimum power in cobolt lasers.  Any
         # non-negative number is accepted.
         W_str = "%.4f" % (mW / 1000.0)
         _logger.info("Setting laser power to %s W.", W_str)
         response = self.send(b"@cobasp " + W_str.encode())
-        _logger.info("Power response [%s]", response.decode())
+        _logger.debug("Power response [%s]", response.decode())
         return response
 
     def _do_set_power(self, power: float) -> None:
