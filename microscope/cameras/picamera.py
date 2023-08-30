@@ -226,9 +226,9 @@ class PiCamera(microscope.abc.Camera):
         return Binning(1, 1)
 
     @keep_acquiring
-    def _set_roi(self, left, top, width, height):
-        """Set the ROI to (left, tip, width, height)."""
-        self.roi = ROI(left, top, width, height)
+    def _set_roi(self, region):
+        """Set the ROI to the name tuple ROI(left, top, width, height)."""
+        self.roi = region
 
     # set camera LED status, off is best for microscopy.
     def setLED(self, state=False):
@@ -252,7 +252,7 @@ class PiCamera(microscope.abc.Camera):
             self.camera.resolution = (2592, 1944)
         # faqll back to defualt if not set above.
         res = self.camera.resolution
-        self._set_roi(0, 0, res[0], res[1])
+        self._set_roi(ROI(0, 0, res[0], res[1]))
         return res
 
     def _do_trigger(self):
@@ -265,7 +265,13 @@ class PiCamera(microscope.abc.Camera):
         if self._acquiring:
             with picamera.array.PiYUVArray(self.camera) as output:
                 self.camera.capture(output, format="yuv", use_video_port=False)
-                self._queue.put(output.array[:, :, 0])
+                self._queue.put(
+                    output.array[
+                        self.roi.top : self.roi.top + self.roi.height,
+                        self.roi.left : self.roi.left + self.roi.width,
+                        0,
+                    ]
+                )
 
 
 # ongoing implemetation notes

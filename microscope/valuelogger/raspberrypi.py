@@ -23,16 +23,28 @@
 """
 
 import contextlib
+import logging
+import queue
 import re
 import threading
 import time
 import typing
-import logging
-import queue
-import Adafruit_MCP9808.MCP9808 as MCP9808
 
-# library for TSYS01 sensor
-# import TSYS01.TSYS01 as TSYS01
+
+try:
+    from Adafruit_MCP9808 import MCP9808
+
+    has_MCP9808 = True
+except ModuleNotFoundError:
+    has_MCP9808 = False
+
+try:
+    from TSYS01 import TSYS01
+
+    has_TSYS01 = True
+except ModuleNotFoundError:
+    has_TSYS01 = False
+
 
 import microscope.abc
 
@@ -62,11 +74,19 @@ class RPiValueLogger(microscope.abc.ValueLogger):
                 "adding sensor: " + sensor_type + " Adress: %d " % i2c_address
             )
             if sensor_type == "MCP9808":
+                if not has_MCP9808:
+                    raise microscope.LibraryLoadError(
+                        "Adafruit_MCP9808 Python package not found"
+                    )
                 self._sensors.append(MCP9808.MCP9808(address=i2c_address))
                 # starts the last one added
                 self._sensors[-1].begin()
                 print(self._sensors[-1].readTempC())
             elif sensor_type == "TSYS01":
+                if not has_TSYS01:
+                    raise microscope.LibraryLoadError(
+                        "TSYS01 Python package not found"
+                    )
                 self._sensors.append(TSYS01.TSYS01(address=i2c_address))
                 print(self._sensors[-1].readTempC())
             self.initialize()
@@ -161,3 +181,19 @@ class RPiValueLogger(microscope.abc.ValueLogger):
                     "Temperature-%s =  %s" % (i, self.temperature[i])
                 )
             self.inputQ.put(self.temperature)
+
+    def getValues(self):
+        """Reads all sensor values for running the value logger in remote 
+        pull mode"""
+
+        if len(self._sensors) == 0:
+            return ()
+
+        self.temperature = [None] * len(self._sensors)
+
+        for i in range(len(self._sensors)):
+            try:
+                self.temprature[i] = self._sensors[i].readTempC()
+            except:
+                raise Exception('Unable to read temparture value')
+        return self.temprature

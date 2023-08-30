@@ -21,10 +21,18 @@
 """
 
 import ctypes
+import os
 from ctypes import c_char_p, c_double, c_int, c_size_t, c_uint32
-from microscope._utils import load_library
 
-SDK = load_library(windows_file="ASDK", unix_file="libasdk.so")
+import microscope._utils
+
+
+if os.name == "nt":  # is windows
+    _libname = "ASDK"
+else:
+    _libname = "libasdk.so"  # Not actually tested yet
+SDK = microscope._utils.library_loader(_libname)
+
 
 class DM(ctypes.Structure):
     pass

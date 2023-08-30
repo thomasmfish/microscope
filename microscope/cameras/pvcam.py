@@ -136,7 +136,6 @@ This module exposes pvcam C library functions in python.
 import ctypes
 import logging
 import os
-import sys
 import platform
 import time
 import weakref
@@ -145,8 +144,8 @@ import numpy as np
 import Pyro4
 
 import microscope
+import microscope._utils
 import microscope.abc
-from microscope._utils import load_library
 
 
 _logger = logging.getLogger(__name__)
@@ -675,11 +674,14 @@ class md_frame(ctypes.Structure):
         ("roiCount", uns16),
     ]
 
-def _load_lib():
-    _dllsuffix = platform.architecture()[0].rstrip("bit")
-    return load_library(windows_file="pvcam" + _dllsuffix, unix_file="pvcam.so")
 
-_lib = _load_lib()
+if os.name == "nt":  # is windows
+    if platform.architecture()[0] == "32bit":
+        _lib = microscope._utils.library_loader("pvcam32", ctypes.WinDLL)
+    else:
+        _lib = microscope._utils.library_loader("pvcam64", ctypes.WinDLL)
+else:
+    _lib = microscope._utils.library_loader("pvcam.so")
 
 
 ### Functions ###

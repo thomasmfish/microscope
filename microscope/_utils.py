@@ -17,29 +17,16 @@
 ## You should have received a copy of the GNU General Public License
 ## along with Microscope.  If not, see <http://www.gnu.org/licenses/>.
 
-import threading
-import typing
+import ctypes
 import os
 import sys
-import ctypes
+import threading
+import typing
 
 import serial
 
 import microscope
 import microscope.abc
-
-def load_library(windows_file=None, unix_file=None):
-    kwargs = {}
-    if windows_file is not None and os.name == "nt":
-        dll = windows_file
-        if sys.version_info >= (3, 8):
-            kwargs["winmode"] = 0
-    elif unix_file is not None:
-        dll = unix_file
-    else:
-        raise OSError("Unable to laod DLL")
-
-    return ctypes.CDLL(dll, **kwargs)
 
 
 # Both pySerial and serial distribution packages install an import
@@ -57,6 +44,36 @@ if not hasattr(serial, "Serial"):
         raise microscope.MicroscopeError(
             "imported package serial does not have Serial class"
         )
+
+
+def library_loader(
+    libname: str, dlltype: typing.Type[ctypes.CDLL] = ctypes.CDLL, **kwargs
+) -> ctypes.CDLL:
+    """Load shared library.
+
+    This exists mainly to search for DLL in Windows using a standard
+    search path, i.e, search for dlls in ``PATH``.
+
+    Args:
+        libname: file name or path of the library to be loaded as
+            required by `dlltype`
+        dlltype: the class of shared library to load.  Typically,
+            ``CDLL`` but sometimes ``WinDLL`` in windows.
+        kwargs: other arguments passed on to ``dlltype``.
+    """
+    # Python 3.8 in Windows uses an altered search path.  Their
+    # reasons is security and I guess it would make sense if we
+    # installed the DLLs we need ourselves but we don't.  `winmode=0`
+    # restores the use of the standard search path.  See issue #235.
+    if (
+        os.name == "nt"
+        and sys.version_info >= (3.8)
+        and "winmode" not in kwargs
+    ):
+        winmode_kwargs = {"winmode": 0}
+    else:
+        winmode_kwargs = {}
+    return dlltype(libname, **winmode_kwargs, **kwargs)
 
 
 class OnlyTriggersOnceOnSoftwareMixin(microscope.abc.TriggerTargetMixin):
