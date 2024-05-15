@@ -82,28 +82,25 @@ class SapphireLaser(
 
         self.initialize()
 
-    def _write(self, command):
-        count = super()._write(command)
+    @microscope.abc.SerialDeviceMixin.lock_comms
+    def send(self, command, ignore=[]):
         # This device always writes backs something.  If echo is on,
-        # it's the whole command, otherwise just an empty line.  Read
-        # it and throw it away.
-        self._readline()
-        return count
-
-    def send(self, command):
-        """Send command and retrieve response."""
+        # it's the whole command, otherwise just an empty line.
+        # Use ignore to ensure this isn't read.
         self._write(command)
-        return self._readline()
+        ignore += command
+        return self._readline(ignore=ignore, float=self.connection.timeout)
 
     @microscope.abc.SerialDeviceMixin.lock_comms
     def clearFault(self):
         self.flush_buffer()
         return self.get_status()
 
+    @microscope.abc.SerialDeviceMixin.lock_comms
     def flush_buffer(self):
         line = b" "
         while len(line) > 0:
-            line = self._readline()
+            line = self._readline(timeout=self.connection.timeout)
 
     @microscope.abc.SerialDeviceMixin.lock_comms
     def get_status(self):
@@ -127,12 +124,12 @@ class SapphireLaser(
         ]:
             result.append(stat + " " + self.send(cmd).decode())
 
-        self._write(b"?fl")
-        faults = self._readline()
-        response = self._readline()
+        command = b"?fl"
+        faults = self.send(command)
+        response = self._readline(ignore=[command], timeout=1)
         while response:
             faults += b" " + response
-            response = self._readline()
+            response = self._readline(ignore=[command], timeout=1)
 
         result.append(faults.decode())
         return result
@@ -144,7 +141,6 @@ class SapphireLaser(
         self.flush_buffer()
 
     #  Initialization to do when cockpit connects.
-    @microscope.abc.SerialDeviceMixin.lock_comms
     def initialize(self):
         self.flush_buffer()
 
@@ -175,15 +171,12 @@ class SapphireLaser(
         return self._write(b"l=0")
 
     # Return True if the laser is currently able to produce light.
-    @microscope.abc.SerialDeviceMixin.lock_comms
     def get_is_on(self):
         return self.send(b"?l") == b"1"
 
-    @microscope.abc.SerialDeviceMixin.lock_comms
     def _get_power_mw(self):
         return float(self.send(b"?p"))
 
-    @microscope.abc.SerialDeviceMixin.lock_comms
     def _set_power_mw(self, mW):
         mW_str = "%.3f" % mW
         _logger.info("Setting laser power to %s mW.", mW_str)

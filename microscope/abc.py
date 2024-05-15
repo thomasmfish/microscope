@@ -1003,9 +1003,14 @@ class SerialDeviceMixin(metaclass=abc.ABCMeta):
         self.connection = None  # serial.Serial (to be constructed by child)
         self._comms_lock = threading.RLock()
 
-    def _readline(self) -> bytes:
+    def _readline(self, ignore=[], timeout=0.5) -> bytes:
         """Read a line from connection without leading and trailing whitespace."""
-        return self.connection.readline().strip()
+        ignore += [b"", "", None]  # Always ignore empty strings
+        result = None
+        timeout += time.time()
+        while result in ignore and time.time() < timeout:
+            result = self.connection.readline().strip()
+        return result
 
     def _write(self, command: bytes) -> int:
         """Send a command to the device.

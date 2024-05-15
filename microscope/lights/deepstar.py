@@ -53,12 +53,12 @@ class DeepstarLaser(
         )
         # If the laser is currently on, then we need to use 7-byte mode; otherwise we need to
         # use 16-byte mode.
-        self._write(b"S?")
-        response = self._readline()
+        
+        response = self.send(b"S?")
         _logger.info("Current laser state: [%s]", response.decode())
 
-        self._write(b"STAT3")
-        option_codes = self._readline()
+        
+        option_codes = self.send(b"STAT3")
         if not option_codes.startswith(b"OC "):
             raise microscope.DeviceError(
                 "Failed to get option codes '%s'" % option_codes.decode()
@@ -81,14 +81,26 @@ class DeepstarLaser(
         response = self.connection.write(command)
         return response
 
+    @microscope.abc.SerialDeviceMixin.lock_comms
+    def send(self, command, ignore=[]):
+        """Send command and retrieve response."""
+        self._write(command)
+        ignore += [b">"]
+        if command.endswith(b"?"):
+            ignore.append(command)
+        response = self._readline(ignore=ignore, timeout=5)
+        _logger.debug("%s response: %s", command, response.decode())
+        return response
+
     # Get the status of the laser, by sending the
     # STAT0, STAT1, STAT2, and STAT3 commands.
     @microscope.abc.SerialDeviceMixin.lock_comms
     def get_status(self):
         result = []
         for i in range(4):
-            self._write(("STAT%d" % i).encode())
-            result.append(self._readline().decode())
+            result.append(
+                self.send(("STAT%d" % i).encode()).decode()
+                )
         return result
 
     # Turn the laser ON. Return True if we succeeded, False otherwise.
@@ -106,14 +118,12 @@ class DeepstarLaser(
             (b"MF", "MF response [%s]"),
             (b"A2DF", "A2DF response [%s]"),
         ]:
-            self._write(cmd)
-            response = self._readline()
+            response = self.send(cmd)
             _logger.debug(msg, response.decode())
 
         if not self.get_is_on():
             # Something went wrong.
-            self._write(b"S?")
-            response = self._readline()
+            response = self.send(b"S?")
             _logger.error(
                 "Failed to turn on. Current status: [%s]", response.decode()
             )
@@ -124,30 +134,24 @@ class DeepstarLaser(
         self.disable()
 
     # Turn the laser OFF.
-    @microscope.abc.SerialDeviceMixin.lock_comms
     def _do_disable(self):
         _logger.info("Turning laser OFF.")
-        self._write(b"LF")
-        return self._readline().decode()
+        return self.send(b"LF").decode()
 
     # Return True if the laser is currently able to produce light. We assume this is equivalent
     # to the laser being in S2 mode.
-    @microscope.abc.SerialDeviceMixin.lock_comms
     def get_is_on(self):
-        self._write(b"S?")
-        response = self._readline()
+        response = self.send(b"S?")
         _logger.debug("Are we on? [%s]", response.decode())
         return response == b"S2"
 
-    @microscope.abc.SerialDeviceMixin.lock_comms
     def _do_set_power(self, power: float) -> None:
         _logger.debug("level=%d", power)
         power_int = int(power * 0xFFF)
         _logger.debug("power=%d", power_int)
         strPower = "PP%03X" % power_int
         _logger.debug("power level=%s", strPower)
-        self._write(strPower.encode())
-        response = self._readline()
+        response = self.send(strPower.encode())
         _logger.debug("Power response [%s]", response.decode())
 
     def _do_get_power(self) -> float:
@@ -160,8 +164,7 @@ class DeepstarLaser(
             query = b"PP"
             scale = 0xFFF
 
-        self._write(query + b"?")
-        answer = self._readline()
+        answer = self.send(query + b"?")
         if not answer.startswith(query):
             raise microscope.DeviceError(
                 "failed to read power from '%s'" % answer.decode()

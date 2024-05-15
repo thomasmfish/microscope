@@ -66,17 +66,19 @@ class CoboltLaser(
 
         self.initialize()
 
+    @microscope.abc.SerialDeviceMixin.lock_comms
     def send(self, command):
         """Send command and retrieve response."""
         success = False
         while not success:
             self._write(command)
-            response = self._readline()
+            response = self._readline(
+                ignore=[command],
+                timeout=self.connection.timeout
+                )
             # Catch zero-length responses to queries and retry.
-            if not command.endswith(b"?"):
-                success = True
-            elif len(response) > 0:
-                success = True
+            success = len(response) > 0 or not command.endswith(b"?")
+            _logger.debug("%s response: %s", command, response.decode())
         return response
 
     @microscope.abc.SerialDeviceMixin.lock_comms
@@ -130,13 +132,11 @@ class CoboltLaser(
         return True
 
     # Turn the laser OFF.
-    @microscope.abc.SerialDeviceMixin.lock_comms
     def disable(self):
         _logger.info("Turning laser OFF.")
         return self.send(b"l0").decode()
 
     # Return True if the laser is currently able to produce light.
-    @microscope.abc.SerialDeviceMixin.lock_comms
     def get_is_on(self):
         response = self.send(b"l?")
         return response == b"1"
@@ -153,13 +153,14 @@ class CoboltLaser(
                 success = True
         return 1000 * float(response)
 
-    @microscope.abc.SerialDeviceMixin.lock_comms
     def _set_power_mw(self, mW: float) -> None:
         # There is no minimum power in cobolt lasers.  Any
         # non-negative number is accepted.
         W_str = "%.4f" % (mW / 1000.0)
         _logger.info("Setting laser power to %s W.", W_str)
-        return self.send(b"@cobasp " + W_str.encode())
+        response = self.send(b"@cobasp " + W_str.encode())
+        _logger.debug("Power response [%s]", response.decode())
+        return response
 
     def _do_set_power(self, power: float) -> None:
         self._set_power_mw(power * self._max_power_mw)
